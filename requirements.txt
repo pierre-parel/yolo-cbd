@@ -1,0 +1,4 @@
+imutils
+ultralytics
+numpy
+opencv-python

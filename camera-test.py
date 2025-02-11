@@ -4,6 +4,10 @@ from ultralytics import YOLO
 import numpy as np
 import cv2 as cv
 
+import serial
+import time
+
+# Import models
 model_detect = YOLO("weights/best-detect.pt")
 model_cls = YOLO("weights/best-cls.pt")
 
@@ -20,7 +24,8 @@ class_labels = {
 
 max_label_length = max(len(label) for label in class_labels.values())
 
-vid = cv.VideoCapture(0)
+# Initialize webcam
+vid = cv.VideoCapture(2)
 ret, frame = vid.read()
 height, width = frame.shape[:2]
 start_x = width // 2 - 112
@@ -57,6 +62,18 @@ Full Sour: 0.00%
 Fungus Damage: 0.00%
 Good: 0.00%
 Insect Damage: 0.00%"""
+import serial.tools.list_ports as port_list
+ports = list(port_list.comports())
+for p in ports:
+    print(p)
+
+# arduino = serial.Serial(port="COM4", baudrate=9600, timeout=.1)
+
+# def write_read(x):
+#     arduino.write(bytes(x, 'utf-8'))
+#     time.sleep(0.05)
+#     data = arduino.readline()
+#     return data
 
 while True:
     ret, frame = vid.read()
@@ -72,6 +89,9 @@ while True:
 
     im = cv.resize(im, (640, 640))
     results = model_cls(source=im, show=True)
+
+    top1 = results[0].probs.top1
+    # write_read(top1)
     k = input("Do you still want to continue? (y/n): ")
     if k == "n":
         break
