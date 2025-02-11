@@ -2,3 +2,4 @@ imutils
 ultralytics
 numpy
 opencv-python
+pyserial
