@@ -29,8 +29,9 @@ for p in ports:
 arduino = serial.Serial(port="COM6", timeout=.1)
 
 def write_read(x):
+    # print(bytes(x, 'utf-8'))
     num_bytes_written = arduino.write(bytes(x, 'utf-8'))
-    print(f"Number of bytes written: {num_bytes_written}")
+    # print(f"Number of bytes written: {num_bytes_written}")
     time.sleep(0.05)
     data = arduino.readline()
     return data
@@ -40,34 +41,44 @@ def read_serial():
     return data
 
 value = write_read(str(0))
+queue = []
 while True:
-    if read_serial() == b'1\r\n':
-        print("No beans")
-        continue
-    else:
-        print("================")
-        print("Bean detected")
+    if read_serial() == b'0':
         ret, frame = vid.read()
-        results = model_detect(source=frame, conf=0.6, show=True)
+        # cv.imshow("Frame", frame)
+        results = model_detect(source=frame, conf=0.6, verbose=False)
         boxes = results[0].boxes.xyxy.tolist()
-        # FIX: Bytes being sent are empty
-        # FIX: Arduino starting without python
-        # FIX: Extra spins are present
-        if len(boxes) == 0:
-            print("No beans in picture")
-            value = write_read(str(0))
+        if len(boxes) != 1:
+            # print("No beans or multiple beans in picture")
+            if len(queue) == 4:
+                val = str(queue.pop(0)) + '\n'
+                value = write_read(val)
+            else:
+                write_read("-1")
+            queue.append(0)
+            # for v in queue:
+            #     print(v, end=' ')
+            # print()
             continue
-
         im = np.zeros(2)
         for i, box in enumerate(boxes):
             x1, y1, x2, y2 = box
             im = frame[int(y1):int(y2), int(x1):int(x2)]
 
         im = cv.resize(im, (640, 640))
-        results = model_cls(source=im, show=True)
+        results = model_cls(source=im, show=True, verbose=False)
 
         top1 = results[0].probs.top1
-        value = write_read(str(int(top1)))
-        print(f"Sent: {value}")
+        val = ""
+        if len(queue) == 4:
+            val = str(queue.pop(0)) + '\n'
+            value = write_read(val)
+        else:
+            write_read("-1")
+        queue.append(top1)
+        # print(f"Appended to queue: {top1}")
+        # for v in queue:
+        #     print(v, end=' ')
+        # print()
 
 cv.destroyAllWindows()
